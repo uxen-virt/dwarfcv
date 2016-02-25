@@ -47,8 +47,8 @@ fill_sec_array(bfd *abfd, asection *asect, void *obj)
             }
         }
         if (i == symcount) {
-            warnx("%s: section %s symbol not found", __FUNCTION__,
-                  asect->name);
+            dprintf("%s: section %s symbol not found", __FUNCTION__,
+                    asect->name);
             asym = NULL;
         }
     }

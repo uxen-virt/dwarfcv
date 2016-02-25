@@ -465,8 +465,6 @@ parse_abbrev(DIECursor *cursor, DWARF_InfoData *id, uint8_t *abbrev)
             id->dir = a.string;
             break;
         case DW_AT_low_pc:
-            if (a.type != Addr)
-                __asm("int $3");
             assert(a.type == Addr);
             id->pclo = a.addr;
             break;
@@ -1559,8 +1557,8 @@ append_typedef(int type, const char *name, bool save_translation)
     } else
         typedef_type = append_modifier_type(type, 0);
 
+    assert(!save_translation);
     if (save_translation) {
-        __asm("int $3");
         check_typedefs();
         typedefs[typedefs_used] = type;
         translated_typedefs[typedefs_used] = typedef_type;
@@ -2702,8 +2700,6 @@ create_types(struct bfd *bfd)
                 break;
 
             case DW_TAG_subprogram:
-                if (id.entry_off == 49683)
-                    __asm("int $3");
                 if (id.name && (id.pclo || id.pchi)) {
                     DIECursor subtree_cursor;
 
@@ -2830,12 +2826,10 @@ create_types(struct bfd *bfd)
             case DW_TAG_mutable_type: // withdrawn
             case DW_TAG_shared_type:
             case DW_TAG_rvalue_reference_type:
-                if (cvtype < 0)
-                    __asm("int $3");
+                assert(cvtype >= 0);
                 break;
             default:
-                if (cvtype >= 0)
-                    __asm("int $3");
+                assert(cvtype < 0);
                 break;
             }
 
@@ -2843,9 +2837,11 @@ create_types(struct bfd *bfd)
             {
                 assert(cvtype == tid);
                 tid++;
-                dprintf("%x tid %x XXXXXXXXXXXXXXXXXXXXXXXXXX\n", user_types_used, tid);
+                dprintf("%x tid %x XXXXXXXXXXXXXXXXXXXXXXXXXX\n",
+                        user_types_used, tid);
                 if (offset_to_type[id.entry_ptr - debug_info] != cvtype)
-                    __asm("int $3");
+                    dprintf("%x != %x\n",
+                            offset_to_type[id.entry_ptr - debug_info], cvtype);
                 assert(offset_to_type[id.entry_ptr - debug_info] == cvtype);
             }
         }
