@@ -294,10 +294,11 @@ add_lines(struct bfd *bfd, char const *fname, asection *asec,
                                 nr_lineInfo * sizeof(LineInfoEntry) +
                                 portion_align);
     if (!debugS)
-        err(1, "realloc debugS %"PRId64, debugS_length +
-            sizeof(uint32_t) + sizeof(uint32_t) +
-            sizeof(struct lines) + sizeof(struct lines_mapping) +
-            nr_lineInfo * sizeof(LineInfoEntry));
+        err(1, "realloc debugS %p",
+            (void *)(debugS_length +
+                     sizeof(uint32_t) + sizeof(uint32_t) +
+                     sizeof(struct lines) + sizeof(struct lines_mapping) +
+                     nr_lineInfo * sizeof(LineInfoEntry)));
 
     lines = (struct lines *)
         (debugS + debugS_length + sizeof(uint32_t) + sizeof(uint32_t));
@@ -360,6 +361,10 @@ add_lines(struct bfd *bfd, char const *fname, asection *asec,
 
     return 1;
 }
+
+#ifndef MAX_PATH
+#define MAX_PATH FILENAME_MAX
+#endif
 
 static bool
 _flush_lines(struct bfd *bfd, DWARF_LineState *state)
@@ -435,7 +440,7 @@ _flush_lines(struct bfd *bfd, DWARF_LineState *state)
                 if (dump)
                     printf("AddLines(%08x+%04x, Line=%4d+%3"PRId64", %s)\n",
                            firstAddr, length, firstLine,
-                           entry - first_entry, fname);
+                           (uint64_t)(entry - first_entry), fname);
 #if 0
                 /* ZZZ */
                 rc = mod->AddLines(fname, sec, firstAddr, length, firstAddr, firstLine,
@@ -459,7 +464,7 @@ _flush_lines(struct bfd *bfd, DWARF_LineState *state)
         printf("AddLines(%08x+%04x, Line=%4d+%3d, entries %"PRId64", %s)\n",
                firstAddr, length, firstLine,
                (entry - 1)->line - first_entry->line,
-               entry - first_entry, fname);
+               (uint64_t)(entry - first_entry), fname);
     rc = add_lines(bfd, fname, sec, firstAddr, length, firstAddr, firstLine,
                    first_entry, entry - first_entry);
 

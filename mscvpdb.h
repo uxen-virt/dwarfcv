@@ -96,6 +96,19 @@
  * types, they are not completely linked together.
  */
 
+#ifndef _WIN32
+typedef uint32_t DWORD;
+typedef uint16_t WORD;
+typedef uint8_t BYTE;
+typedef int8_t CHAR;
+typedef struct _GUID {
+  DWORD Data1;
+  WORD  Data2;
+  WORD  Data3;
+  BYTE  Data4[8];
+} GUID;
+#endif  /* _WIN32 */
+
 #include "pshpack1.h"
 
 /* ======================================== *
@@ -2021,6 +2034,7 @@ typedef struct _PDB_FPO_DATA
 
 #include "poppack.h"
 
+#if 0
 /* ----------------------------------------------
  * Information used for parsing
  * ---------------------------------------------- */
@@ -2042,7 +2056,8 @@ struct msc_debug_info
 };
 
 /* coff.c */
-extern BOOL coff_process_info(const struct msc_debug_info* msc_dbg);
+// extern BOOL coff_process_info(const struct msc_debug_info* msc_dbg);
+#endif
 
 /* ===================================================
  * The old CodeView stuff (for NB09 and NB11)

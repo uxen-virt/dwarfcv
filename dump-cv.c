@@ -183,7 +183,8 @@ p_file_strings(int base, int len)
     int n = 0;
 
     while (dlen > 0) {
-        printf("%x<%"PRIx64">: %s\n", n, (uint8_t *)strings - (debugS + base),
+        printf("%x<%p>: %s\n", n,
+               (void *)((uint8_t *)strings - (debugS + base)),
                strings);
         dlen -= strlen(strings) + 1;
         strings += strlen(strings) + 1;
@@ -208,8 +209,8 @@ p_file_info(int base, int len)
     int l;
 
     while (dlen > 0) {
-        printf("%x<%"PRIx64">: offset %x type %04x\n", n,
-               (uint8_t *)info - (debugS + base), info->offset,
+        printf("%x<%p>: offset %x type %04x\n", n,
+               (void *)((uint8_t *)info - (debugS + base)), info->offset,
                info->type);
         if (info->type)
             l = sizeof(struct file_info) + 16 /* md5 */;

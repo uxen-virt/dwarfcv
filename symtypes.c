@@ -31,6 +31,7 @@ static unsigned int dwarf_types_used = 0;
 static unsigned int dwarf_types_max = 0;
 
 // class properties (also apply to struct,union and enum)
+#if 0
 static const int kPropNone        = 0x00;
 static const int kPropPacked      = 0x01;
 static const int kPropHasCtorDtor = 0x02;
@@ -39,8 +40,11 @@ static const int kPropIsNested    = 0x08;
 static const int kPropHasNested   = 0x10;
 static const int kPropHasOverAsgn = 0x20;
 static const int kPropHasCasting  = 0x40;
+#endif
 static const int kPropIncomplete  = 0x80;
+#if 0
 static const int kPropScoped      = 0x100;
+#endif
 static const int kPropReserved2   = 0x200;
 
 static uint32_t *offset_to_type = NULL;
@@ -529,21 +533,23 @@ parse_abbrev(DIECursor *cursor, DWARF_InfoData *id, uint8_t *abbrev)
             uint8_t *iabbrev;
 
             if (a.type != Ref)
-                errx(1, "<%"PRIx64"> expected ref, have %x",
-                     id->entry_ptr - debug_info, a.type);
+                errx(1, "<%p> expected ref, have %x",
+                     (void *)(id->entry_ptr - debug_info), a.type);
             init_die_cursor(&icursor, cursor->cu, a.ref);
             if (!read_code(&icursor, &iid, true))
-                errx(1, "<%"PRIx64"> no code at origin <%"PRIx64">",
-                     id->entry_ptr - debug_info, a.ref - debug_info);
+                errx(1, "<%p> no code at origin <%p>",
+                     (void *)(id->entry_ptr - debug_info),
+                     (void *)(a.ref - debug_info));
             iabbrev = get_abbrev(icursor.cu->debug_abbrev_offset, iid.code);
             if (!iabbrev)
-                errx(1, "<%"PRIx64"> missing abbrev code %x",
-                     id->entry_ptr - debug_info, iid.code);
+                errx(1, "<%p> missing abbrev code %x",
+                     (void *)(id->entry_ptr - debug_info), iid.code);
             /* skip tag */(void)LEB128(iabbrev);
             /* skip hasChild */(void)*iabbrev++;
             if (!parse_abbrev(&icursor, id, iabbrev))
-                errx(1, "<%"PRIx64"> parse abbrev <%"PRIx64"> failed",
-                     id->entry_ptr - debug_info, a.ref - debug_info);
+                errx(1, "<%p> parse abbrev <%p> failed",
+                     (void *)(id->entry_ptr - debug_info),
+                     (void *)(a.ref - debug_info));
             break;
         }
         }
@@ -1835,8 +1841,8 @@ add_structure(DWARF_InfoData *structid, DWARF_CompilationUnit *cu,
         while (die_read_next(cursor, &id, true)) {
             int cvid = -1;
 
-            dprintf("<%"PRIx64"> id %s tag %x\n",
-                    id.entry_ptr - debug_info,
+            dprintf("<%p> id %s tag %x\n",
+                    (void *)(id.entry_ptr - debug_info),
                     id.name ? : "<null>",
                     id.tag);
 
@@ -1857,11 +1863,11 @@ add_structure(DWARF_InfoData *structid, DWARF_CompilationUnit *cu,
                 if (isunion || cvid == S_CONSTANT_V2) {
                     int type = get_type_by_ptr(id.type);
                     add_field_member(0, off, type, id.name ? : "");
-                    dprintf("field %s offset %x type %x<%"PRIx64">\n",
+                    dprintf("field %s offset %x type %x<%p>\n",
                             id.name,
                             off,
                             type,
-                            id.type ? id.type - debug_info : 0);
+                            (void *)(id.type ? id.type - debug_info : 0));
                     nfields++;
                 }
             } else if (id.tag == DW_TAG_inheritance) {
@@ -2023,15 +2029,15 @@ add_subroutine(DWARF_InfoData *id, DWARF_CompilationUnit *cu, DIECursor *cursor)
                 add_dwarf_types(sizeof(al->arglist_v2.args[0]));
                 al = (codeview_reftype *)(dwarf_types + albegin);
                 al->arglist_v2.args[nargs] = type;
-                dprintf("arg type %x<%"PRIx64">\n",
+                dprintf("arg type %x<%p>\n",
                         type,
-                        id.type ? id.type - debug_info : 0);
+                        (void *)(id.type ? id.type - debug_info : 0));
                 nargs++;
             } else if (id.tag == DW_TAG_unspecified_parameters) {
                 /* XXX do something */
             } else
-                dprintf("<%"PRIx64"> tag %x not formal parameter\n",
-                        id.entry_ptr - debug_info, id.tag);
+                dprintf("<%p> tag %x not formal parameter\n",
+                        (void *)(id.entry_ptr - debug_info), id.tag);
             goto_sibling(cursor);
         }
 
@@ -2385,16 +2391,16 @@ add_proc(struct bfd *bfd, DWARF_InfoData *procid, DWARF_CompilationUnit *cu,
                 add_dwarf_types(sizeof(al->arglist_v2.args[0]));
                 al = (codeview_reftype *)(dwarf_types + albegin);
                 al->arglist_v2.args[nargs] = type;
-                dprintf("param %s type %x<%"PRIx64">\n",
+                dprintf("param %s type %x<%p>\n",
                         id.name,
                         type,
-                        id.type ? id.type - debug_info : 0);
+                        (void *)(id.type ? id.type - debug_info : 0));
                 nargs++;
             } else if (id.tag == DW_TAG_unspecified_parameters) {
                 /* XXX do something */
             } else
-                dprintf("<%"PRIx64"> tag %x not formal parameter\n",
-                        id.entry_ptr - debug_info, id.tag);
+                dprintf("<%p> tag %x not formal parameter\n",
+                        (void *)(id.entry_ptr - debug_info), id.tag);
             prev = *cursor;
         }
         /* if (stackvar) */
@@ -2494,8 +2500,8 @@ map_types(struct bfd *bfd)
         init_die_cursor(&cursor, cu, cu->data);
 
         while (die_read_next(&cursor, &id, false)) {
-            /* dprintf("0x%08"PRIx64", level = %d, id.code = %x, " */
-            /*         "id.tag = %x\n", id.entry_ptr - debug_info, */
+            /* dprintf("0x%08lx, level = %d, id.code = %x, " */
+            /*         "id.tag = %x\n", (void *)(id.entry_ptr - debug_info), */
             /*         cursor.level, id.code, id.tag); */
 
             switch (id.tag) {
@@ -2561,8 +2567,8 @@ create_types(struct bfd *bfd)
             int cvtype = -1;
             int type;
 
-            /* dprintf("0x%08"PRIx64", level = %d, id.code = %x, " */
-            /*         "id.tag = %x\n", id.entry_ptr - debug_info, */
+            /* dprintf("0x%08p, level = %d, id.code = %x, " */
+            /*         "id.tag = %x\n", (void *)(id.entry_ptr - debug_info), */
             /*         cursor.level, id.code, id.tag); */
 
             if (id.specification) {
@@ -2581,17 +2587,16 @@ create_types(struct bfd *bfd)
             }
 
             dnewline();
-            dprintf("<%"PRIx64"> id %s tag %x\n",
-                    id.entry_ptr - debug_info,
+            dprintf("<%p> id %s tag %x\n",
+                    (void *)(id.entry_ptr - debug_info),
                     id.name ? : "<null>",
                     id.tag);
 
             switch (id.tag) {
             case DW_TAG_base_type:
                 cvtype = add_basic_type(id.name, id.encoding, id.byte_size);
-                dprintf("<%"PRIx64"> %x = id %s base enc %"PRIx64" bs %"PRIx64
-                        "\n",
-                        id.entry_ptr - debug_info,
+                dprintf("<%p> %x = id %s base enc %"PRIx64" bs %"PRIx64"\n",
+                        (void *)(id.entry_ptr - debug_info),
                         cvtype,
                         id.name ? : "<null>",
                         id.encoding,
@@ -2601,42 +2606,42 @@ create_types(struct bfd *bfd)
                 type = get_type_by_ptr(id.type);
                 cvtype = append_modifier_type(type, 0);
                 add_user_symbol(cvtype, id.name);
-                dprintf("<%"PRIx64"> %x = id %s typedef type %x<%"PRIx64">\n",
-                        id.entry_ptr - debug_info,
+                dprintf("<%p> %x = id %s typedef type %x<%p>\n",
+                        (void *)(id.entry_ptr - debug_info),
                         cvtype,
                         id.name ? : "<null>",
                         type,
-                        id.type ? id.type - debug_info : 0);
+                        (void *)(id.type ? id.type - debug_info : 0));
                 break;
             case DW_TAG_pointer_type:
                 type = get_type_by_ptr(id.type);
                 cvtype = append_pointer_type(type, pointer_attr); // XXX id.byte_size?
-                dprintf("<%"PRIx64"> %x = id %s pointer type %x<%"PRIx64">\n",
-                        id.entry_ptr - debug_info,
+                dprintf("<%p> %x = id %s pointer type %x<%p>\n",
+                        (void *)(id.entry_ptr - debug_info),
                         cvtype,
                         id.name ? : "<null>",
                         type,
-                        id.type ? id.type - debug_info : 0);
+                        (void *)(id.type ? id.type - debug_info : 0));
                 break;
             case DW_TAG_const_type:
                 type = get_type_by_ptr(id.type);
                 cvtype = append_modifier_type(type, 1);
-                dprintf("<%"PRIx64"> %x = id %s const type %x<%"PRIx64">\n",
-                        id.entry_ptr - debug_info,
+                dprintf("<%p> %x = id %s const type %x<%p>\n",
+                        (void *)(id.entry_ptr - debug_info),
                         cvtype,
                         id.name ? : "<null>",
                         type,
-                        id.type ? id.type - debug_info : 0);
+                        (void *)(id.type ? id.type - debug_info : 0));
                 break;
             case DW_TAG_reference_type:
                 type = get_type_by_ptr(id.type);
                 cvtype = append_pointer_type(type, pointer_attr | 0x20);
-                dprintf("<%"PRIx64"> %x = id %s reference type %x<%"PRIx64">\n",
-                        id.entry_ptr - debug_info,
+                dprintf("<%p> %x = id %s reference type %x<%p>\n",
+                        (void *)(id.entry_ptr - debug_info),
                         cvtype,
                         id.name ? : "<null>",
                         type,
-                        id.type ? id.type - debug_info : 0);
+                        (void *)(id.type ? id.type - debug_info : 0));
                 break;
 
             case DW_TAG_class_type:
@@ -2646,8 +2651,8 @@ create_types(struct bfd *bfd)
 
                 get_subtree_cursor(&subtree_cursor, &cursor);
                 cvtype = add_structure(&id, cu, &subtree_cursor);
-                dprintf("<%"PRIx64"> %x = id %s struct\n",
-                        id.entry_ptr - debug_info,
+                dprintf("<%p> %x = id %s struct\n",
+                        (void *)(id.entry_ptr - debug_info),
                         cvtype,
                         id.name ? : "<null>");
                 break;
@@ -2657,8 +2662,8 @@ create_types(struct bfd *bfd)
 
                 get_subtree_cursor(&subtree_cursor, &cursor);
                 cvtype = add_array(&id, cu, &subtree_cursor);
-                dprintf("<%"PRIx64"> %x = id %s array\n",
-                        id.entry_ptr - debug_info,
+                dprintf("<%p> %x = id %s array\n",
+                        (void *)(id.entry_ptr - debug_info),
                         cvtype,
                         id.name ? : "<null>");
                 break;
@@ -2668,8 +2673,8 @@ create_types(struct bfd *bfd)
 
                 get_subtree_cursor(&subtree_cursor, &cursor);
                 cvtype = add_subroutine(&id, cu, &subtree_cursor);
-                dprintf("<%"PRIx64"> %x = id %s subroutine\n",
-                        id.entry_ptr - debug_info,
+                dprintf("<%p> %x = id %s subroutine\n",
+                        (void *)(id.entry_ptr - debug_info),
                         cvtype,
                         id.name ? : "<null>");
                 break;
@@ -2692,8 +2697,8 @@ create_types(struct bfd *bfd)
             case DW_TAG_rvalue_reference_type:
                 type = 0x74;
                 cvtype = append_pointer_type(type, pointer_attr);
-                dprintf("<%"PRIx64"> %x = id %s ****** tag %x\n",
-                        id.entry_ptr - debug_info,
+                dprintf("<%p> %x = id %s ****** tag %x\n",
+                        (void *)(id.entry_ptr - debug_info),
                         cvtype,
                         id.name ? : "<null>",
                         id.tag);
@@ -2706,9 +2711,9 @@ create_types(struct bfd *bfd)
                     get_subtree_cursor(&subtree_cursor, &cursor);
                     cvtype = add_proc(bfd, &id, cu, &subtree_cursor);
                     if (cvtype >= 0)
-                        dprintf("<%"PRIx64"> %x = id %s subprogram pclo %"
+                        dprintf("<%p> %x = id %s subprogram pclo %"
                                 PRIx64" pchi %"PRIx64"\n",
-                                id.entry_ptr - debug_info,
+                                (void *)(id.entry_ptr - debug_info),
                                 cvtype,
                                 id.name ? : "<null>",
                                 id.pclo,
@@ -2720,9 +2725,9 @@ create_types(struct bfd *bfd)
                         cvt->generic.id = 0;
                         update_type_len(cvt, sizeof(cvt->generic), 0);
                         cvtype = next_user_type++;
-                        dprintf("<%"PRIx64"> %x = id %s invalid subprogram "
+                        dprintf("<%p> %x = id %s invalid subprogram "
                                 "pclo %"PRIx64" pchi %"PRIx64"\n",
-                                id.entry_ptr - debug_info,
+                                (void *)(id.entry_ptr - debug_info),
                                 cvtype,
                                 id.name ? : "<null>",
                                 id.pclo,
@@ -2750,7 +2755,7 @@ create_types(struct bfd *bfd)
                                 return false;
                         }
                     } else {
-                        /* printf("%s %s %"PRIx64" - %"PRIx64"\n", */
+                        /* printf("%s %s %lx - %"PRIx64"\n", */
                         /*        id.dir, id.name, id.pclo, id.pchi); */
                         if (!addDWARFSectionContrib(mod, id.pclo, id.pchi))
                             return false;
@@ -2778,8 +2783,8 @@ create_types(struct bfd *bfd)
                         type = get_type_by_ptr(id.type);
                         append_global_var(bfd, id.name, type, asym);
                     }
-                    dprintf("<%"PRIx64"> id %s variable\n",
-                            id.entry_ptr - debug_info,
+                    dprintf("<%p> id %s variable\n",
+                            (void *)(id.entry_ptr - debug_info),
                             id.name ? : "<null>");
                 }
                 break;
