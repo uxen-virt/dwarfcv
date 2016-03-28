@@ -16,9 +16,9 @@
 # CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # 
 
-HOST_WINDOWS =
-
-TOOLSDIR = /uxen/tools
+TOOLSDIR ?= /uxen/tools
+SRCDIR ?= .
+VPATH = $(SRCDIR)
 
 $(HOST_WINDOWS)CC := $(TOOLSDIR)/bin/x86_64-w64-mingw32-gcc
 $(HOST_WINDOWS)HOST_EXE_SUFFIX = .exe
@@ -52,6 +52,10 @@ dump-cv$(HOST_EXE_SUFFIX): $(dumpcv_OBJS)
 	$(LINK.o) -o $@ $^ $(dumpcv_LDLIBS)
 
 -include .*.d
+
+install:
+	@install dwarfcv$(HOST_EXE_SUFFIX) $(PREFIX)/bin
+	@install dump-cv$(HOST_EXE_SUFFIX) $(PREFIX)/bin
 
 clean:
 	@rm -f $(dwarfcv_OBJS) dwarfcv$(HOST_EXE_SUFFIX)
